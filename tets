@@ -1,0 +1,50 @@
+ WHEN AL_RULE_CHARGE_CARD THEN
+          ------------------------------------------------------------------
+          BEGIN
+			   lv_call_audit := true;
+            lv_calc_limit := r.acc_limit_amount;
+            IF ((r.acc_no_limit_flag = BOOL_FLAG_YES) OR (r.acc_limit_amount <= 0)) THEN
+              lv_calc_limit := MAX_BAL_CHARGE_CARD;
+
+              IF ((r.acc_no_limit_flag = BOOL_FLAG_YES) OR (lv_adj_pct_balance = 100)) THEN
+                lv_adj_pct_limit := lv_adj_pct_balance;
+              END IF;
+
+              /* recalc adjustment */
+              IF (lv_adj_pct_limit > 0) THEN
+                lv_adj_amt_limit := lv_calc_limit;
+              ELSE
+                  lv_adj_amt_limit := 0;
+              END IF;
+            END IF;
+
+            lv_ex_principal_value := greatest(r.acc_balance, lv_calc_limit);
+            /* if no adjustment to amount, use the same figure as ex_principle_value*/
+            if ((lv_adj_amt_balance = 0)and(lv_adj_amt_limit = 0)) THEN
+              lv_og_principal_value := greatest(r.acc_balance, lv_calc_limit);
+            ELSE
+              lv_og_principal_value := greatest(r.acc_balance - lv_adj_amt_balance, lv_calc_limit - lv_adj_amt_limit);
+            END IF;
+
+            lv_use_ie_amount_ex := lv_ex_principal_value < 0;
+            lv_use_ie_amount_og := lv_og_principal_value < 0;
+
+			 -- Store card also should follow similar logic as CC with $25 default value. (R66 implementation)
+			 IF lv_store_card_emr_switch = 'N'  AND r.alt_id = C_STORE_CARD_AL_TYPE_ID THEN--kill switch off and AL type is store card -> New calculation
+					lv_commitments_obj.existing_emr := greatest (MIN_EMR_CREDIT_CARD,lv_ex_principal_value * PercentToDecimal(lv_commitment_level) * PercentToDecimal(lv_client_pct_ownership));  /* RN.N_CO_BR-5.1 */
+					lv_commitments_obj.existing_emr_full := greatest (MIN_EMR_CREDIT_CARD,lv_ex_principal_value * PercentToDecimal(lv_commitment_level));
+					IF (lv_ex_principal_value > 0) THEN
+					  IF (lv_og_principal_value > 0) THEN
+						  lv_commitments_obj.ongoing_emr := greatest (MIN_EMR_CREDIT_CARD,lv_commitments_obj.existing_emr * (lv_og_principal_value / lv_ex_principal_value));  /* RN.N_CO_BR-5.2 */
+						  lv_commitments_obj.ongoing_emr_full := greatest (MIN_EMR_CREDIT_CARD,lv_commitments_obj.existing_emr_full * (lv_og_principal_value / lv_ex_principal_value));
+					  END IF;
+					END IF;
+			 ELSE -- Old calculation
+				lv_commitments_obj.existing_emr := lv_ex_principal_value * PercentToDecimal(lv_commitment_level) * PercentToDecimal(lv_client_pct_ownership);  /* RN.N_CO_BR-5.1 */
+				lv_commitments_obj.existing_emr_full := lv_ex_principal_value * PercentToDecimal(lv_commitment_level);
+				IF (lv_ex_principal_value > 0) THEN
+				  lv_commitments_obj.ongoing_emr := lv_commitments_obj.existing_emr * (lv_og_principal_value / lv_ex_principal_value);  /* RN.N_CO_BR-5.2 */
+				  lv_commitments_obj.ongoing_emr_full := lv_commitments_obj.existing_emr_full * (lv_og_principal_value / lv_ex_principal_value);
+				END IF;
+			 END IF;
+          END;
