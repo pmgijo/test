@@ -6,7 +6,6 @@ const Income = (props) => {
   const tableStyle = {
     borderCollapse: 'collapse',
     border: '1px solid black',
-    width: 'auto',
   };
 
   const thTdStyle = {
@@ -14,24 +13,34 @@ const Income = (props) => {
     textAlign: 'center',
     border: '1px solid black',
     backgroundColor: '#f2f2f2',
+    whiteSpace: 'nowrap',
   };
 
   const cellStyle = {
     padding: '8px',
     textAlign: 'center',
     border: '1px solid black',
+    whiteSpace: 'nowrap',
   };
 
   const scrollableDivStyle = {
     overflowX: 'auto',
     maxWidth: '500px',
     display: 'inline-block',
+    verticalAlign: 'top',
+  };
+
+  const fixedTableStyle = {
+    ...tableStyle,
+    width: 'auto',
+    display: 'inline-block',
+    verticalAlign: 'top',
   };
 
   return (
     <div style={{ display: 'flex' }}>
       {/* Fixed Left Column */}
-      <table style={tableStyle}>
+      <table style={fixedTableStyle}>
         <thead>
           <tr>
             <th style={thTdStyle}>Personal Income Individual</th>
@@ -65,7 +74,7 @@ const Income = (props) => {
       </div>
 
       {/* Fixed Right Column */}
-      <table style={tableStyle}>
+      <table style={fixedTableStyle}>
         <thead>
           <tr>
             <th style={thTdStyle}>Total</th>
