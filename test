@@ -1,45 +1,54 @@
 import React, { useState } from "react";
+import './Income.css'; // Create a separate CSS file for better styling control.
 
 const Income = (props) => {
   const [applicants, setApplicants] = useState([{}, {}, {}, {}, {}, {}]);
+
   return (
-    <div>
-      <table>
+    <div style={{ display: 'flex' }}>
+      {/* Fixed Left Column */}
+      <table style={{ borderCollapse: 'collapse' }}>
         <thead>
           <tr>
             <th>Personal Income Individual</th>
-            <th colSpan={applicants.length}>
-              <div style={{ overflowX: 'auto', whiteSpace: 'nowrap', maxWidth: '500px' }}>
-                <table>
-                  <thead>
-                    <tr>
-                      {applicants?.map((appl, index) => (
-                        <th key={index} style={{ minWidth: '100px' }}>Applicant {index + 1}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                </table>
-              </div>
-            </th>
-            <th>Total</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td>Salary/Wages</td>
-            <td colSpan={applicants.length}>
-              <div style={{ overflowX: 'auto', whiteSpace: 'nowrap', maxWidth: '500px' }}>
-                <table>
-                  <tbody>
-                    <tr>
-                      {applicants?.map((appl, index) => (
-                        <td key={index} style={{ minWidth: '100px' }}>1212.00</td>
-                      ))}
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      {/* Scrollable Middle Columns */}
+      <div style={{ overflowX: 'auto', maxWidth: '500px' }}>
+        <table style={{ borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>
+              {applicants?.map((appl, index) => (
+                <th key={index} style={{ minWidth: '100px' }}>Applicant {index + 1}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              {applicants?.map((appl, index) => (
+                <td key={index} style={{ minWidth: '100px' }}>1212.00</td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* Fixed Right Column */}
+      <table style={{ borderCollapse: 'collapse' }}>
+        <thead>
+          <tr>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
             <td>687678.00</td>
           </tr>
         </tbody>
