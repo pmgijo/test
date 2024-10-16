@@ -1,166 +1,43 @@
-import React, { useState, useEffect } from "react";
-import BeforeScript from "./BeforeScript.js";
-import Application from "./Application.js";
-import ApplicantsGroup from "../Applicant/ApplicantsGroup.js";
-import Financials from "../Financials/Financials.js";
-import LoanDetailsGroup from "../LoanDetails/LoanDetailsGroup.js";
-import SecurityDetailsGroup from "../SecurityDetails/SecurityDetailsGroup.js";
-import LMICosts from "../LMICosts/LMICosts.js";
-import PcaaExercise from "../PCAAExercise/PcaaExercise.js";
-import Scenario from "../Scenario/Scenario.js";
-import UpfrontCosts from "../LMICosts/UpfrontCosts.js";
-import { axiosWithAuth } from "../../axios/axiosWithAuth.js";
-import { useDispatch, useSelector } from "react-redux";
-import { scenarioAction } from "../../actions/scenarioAction.js";
-import { assessAction } from "../../actions/assessAction.js"
-import { catalogueAction } from "../../actions/catalogueAction.js";
-import { feeCatalogueAction } from "../../actions/feeCatalogueAction.js";
+function apportionLMI(lmiDetails, currentReturnData) {
+  if (lmiDetails && lmiDetails.lmiPremium && currentReturnData && currentReturnData.loanDetails) {
+    // Ensure all loan amounts are valid numbers and above 0
+    const updatedReturnData = JSON.parse(JSON.stringify(currentReturnData));
+    
+    const ttlLoanAmount = updatedReturnData.loanDetails.reduce((sum, loan) => {
+      const loanAmount = parseFloat(loan.loanAmount || 0);
+      return sum + loanAmount;
+    }, 0);
 
-const MainPanel = ({ scenarioId }) => {
-  const [agreed, setAgreed] = useState(false);
-  const [timerId, setTimerId] = useState(null);
-  const { loading, scenarioData } = useSelector(
-    (state) => state.scenarioData
-  );
-  const dispatch = useDispatch();
-  const [returnData, setReturnData] = useState({
-    application: null,
-    applicants: null,
-    financials: null,
-    loanDetails: null,
-    securityDetails: null,
-    lmiCosts: null,
-    fees: null,
-    pcaaResults: null,
-    scenarioSummary: null,
-  });
-
-  useEffect(() => {
-    dispatch(catalogueAction());
-    dispatch(feeCatalogueAction());
-  }, [dispatch]);
-
-  useEffect(() => {
-    if (scenarioData) {
-      const data = scenarioData[0];
-      if (data && data.application) {
-        setReturnData(data);
-      }
+    if (ttlLoanAmount <= 0) {
+      console.error("Total Loan Amount is invalid:", ttlLoanAmount);
+      return updatedReturnData; // Return early to avoid divide-by-zero
     }
-  }, [scenarioData]);
 
-  const onReturnItem = (data) => {
-    if (data) setAgreed(data);
-  };
-
-  useEffect(() => {
-    if (timerId) {
-      clearTimeout(timerId);
-    }
-    const newTimerId = setTimeout(() => {
-      let data = returnData;
-      data = { scenarioId: scenarioId, ...data };
-      if (
-        returnData?.financials?.incomes &&
-        returnData?.financials?.incomes?.length > 0
-      ) {
-        dispatch(assessAction(data));
-      }
-    }, 3000);
-    setTimerId(newTimerId);
-    return () => clearTimeout(newTimerId);
-  }, [returnData, scenarioId, dispatch]);
-
-  function apportionLMI(lmiDetails, currentReturnData) {
-    if (lmiDetails && lmiDetails.lmiPremium && currentReturnData && currentReturnData.loanDetails) {
-        // Create a deep copy of currentReturnData to avoid mutation
-        const updatedReturnData = JSON.parse(JSON.stringify(currentReturnData));
-        const ttlLoanAmount = updatedReturnData.loanDetails.reduce((sum, loan) => sum + parseFloat(loan.loanAmount || 0), 0);
-        const apportionedLmi = updatedReturnData.loanDetails.map(loan => ({
-            id: loan.id,
-            lmiApportioned: (parseFloat(loan.loanAmount) / ttlLoanAmount) * lmiDetails.lmiPremium
-        }));
-        const updatedLoanDetails = updatedReturnData.loanDetails.map(loan => {
-            const apportionedItem = apportionedLmi.find(item => item.id === loan.id);
-            const apportionedAmount = apportionedItem ? parseFloat(apportionedItem.lmiApportioned || 0) : 0;
-            const newTotalLoanAmount = (parseFloat(loan.loanAmount || 0) + apportionedAmount).toFixed(2);
-        return {
-                ...loan,
-                totalLoanAmount: newTotalLoanAmount // Ensure the property name matches the expected structure
-            };
-        });
-        updatedReturnData.loanDetails = updatedLoanDetails;
-        updatedReturnData.lmiCosts = lmiDetails;
-        const result = updatedReturnData;
-        console.log("Final updatedReturnData:", JSON.stringify(result, null, 2));
-        return result;
-    }
-}
-
-  useEffect(() => {
-    console.log("refreshed", returnData);
-  }, [returnData]);
-
-  const onReturnHandler = (key, data) => {
-    console.log("Key", key);
-    setReturnData((prevData) => {
-      if (key === 'lmiCosts') {
-          const newReturnData = { ...prevData };
-          const results = apportionLMI(data, {...newReturnData});
-          console.log("Results", results);
-          return results;
-      }
-      if (key === 'financials') {
-        return {
-          ...prevData,
-          financials: {
-            ...prevData.financials,
-            ...data,
-          },
-        };
-      } else {
-        return {
-          ...prevData,
-          [key]: data,
-        };
-      }
+    const apportionedLmi = updatedReturnData.loanDetails.map(loan => {
+      const loanAmount = parseFloat(loan.loanAmount || 0);
+      return {
+        id: loan.id,
+        lmiApportioned: (loanAmount / ttlLoanAmount) * lmiDetails.lmiPremium
+      };
     });
-  };
 
-  const btnSave = async () => {
-    const axiosInstance = axiosWithAuth();
-    let data = returnData;
-    data = { scenarioId: scenarioId, ...data };
-    const response = await axiosInstance.post("api/scenario", data);
-    if (response?.data) {
-      dispatch(scenarioAction(scenarioId));
-    }
+    const updatedLoanDetails = updatedReturnData.loanDetails.map(loan => {
+      const apportionedItem = apportionedLmi.find(item => item.id === loan.id);
+      const apportionedAmount = apportionedItem ? parseFloat(apportionedItem.lmiApportioned || 0) : 0;
+      const newTotalLoanAmount = (parseFloat(loan.loanAmount || 0) + apportionedAmount).toFixed(2);
+
+      return {
+        ...loan,
+        totalLoanAmount: newTotalLoanAmount // Ensure this matches the structure in the state
+      };
+    });
+
+    updatedReturnData.loanDetails = updatedLoanDetails;
+    updatedReturnData.lmiCosts = lmiDetails;
+
+    console.log("Final updatedReturnData:", JSON.stringify(updatedReturnData, null, 2));
+    return updatedReturnData; // Ensure this returns the updated data
   }
 
-  return (
-    <div className="itemflexcol tile itemwrap">
-      <div className="itemflexspace underline">
-        <div className="titlehead mb-20 mt-15">Application</div>
-        <div className="itemflex gap-20">
-          <button className="submit-btn clickable mb-20" onClick={btnSave}>Save Scenario</button>
-        </div>
-      </div>
-      <br />
-
-      <div className="itemflexcol">
-        <BeforeScript onReturnItem={onReturnItem} />
-        <Application agreed={agreed} data={returnData.application} onReturnApplication={(data) => onReturnHandler('application', data)} />
-        <ApplicantsGroup agreed={agreed} data={returnData.applicants} onReturnApplicants={(data) => onReturnHandler('applicants', data)} />
-        <Financials agreed={agreed} financials={returnData.financials} securityDetails={returnData.securityDetails} onReturnFinancials={(data) => onReturnHandler('financials', data)} applicants={returnData?.applicants} onReturnSecurityDetails={(data) => onReturnHandler('securityDetails', data)} />
-        <LoanDetailsGroup agreed={agreed} loanDetails={returnData.loanDetails} onReturnLoanDetails={(data) => onReturnHandler('loanDetails', data)} applicants={returnData?.applicants} />
-        <SecurityDetailsGroup agreed={agreed} financials={returnData.financials} securityDetails={returnData.securityDetails} onReturnSecurityDetails={(data) => onReturnHandler('securityDetails', data)} applicants={returnData?.applicants} />
-        <LMICosts agreed={agreed} lmiDetails={returnData.lmiCosts} returnData={returnData} onReturnLMIDetails={(data) => onReturnHandler('lmiCosts', data)} fees={returnData.fees} />
-        <UpfrontCosts agreed={agreed} securityDetails={returnData.securityDetails} propertyValue={returnData.lmiCosts?.propertyValue} fees={returnData.fees} onReturnCosts={(data) => onReturnHandler('fees', data)} />
-        <PcaaExercise agreed={agreed} pcaaResults={returnData.pcaaResults} loanDetails={returnData.loanDetails} financials={returnData.financials} onReturnPCAAExercise={(data) => onReturnHandler('pcaaResults', data)} />
-        <Scenario agreed={agreed} scenarioDetails={returnData.scenario} onReturnScenario={(data) => onReturnHandler('scenarioSummary', data)} />
-      </div>
-    </div>
-  );
-};
-
-export default MainPanel;
+  return currentReturnData; // Return current state if conditions aren't met
+}
