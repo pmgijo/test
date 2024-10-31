@@ -1,0 +1,139 @@
+const fs = require("fs");
+const sax = require("sax");
+
+const inputFilePath = "20241030_Public01.xml"; // Input XML file
+const outputFilePath = "output.json"; // Output JSON file
+
+// Create read and write streams
+const inputFile = fs.createReadStream(inputFilePath);
+const outputFile = fs.createWriteStream(outputFilePath);
+const parser = sax.createStream(true); // Create a SAX parser
+
+// JSON structure for TransferInfo
+let transferInfo = {
+  error: null,
+  FileSequenceNumber: null,
+  RecordCount: null,
+  ExtractTime: null,
+};
+
+// Track if we are currently inside specific elements
+let insideTransferInfo = false;
+let insideABR = false;
+let currentABR = null; // Current ABR record being processed
+let currentElement = null; // To track the current element being processed
+
+// Listen for data from the SAX parser
+parser.on("opentag", (node) => {
+  if (node.name === "Transfer") {
+    transferInfo.error = node.attributes.error; // Get error attribute
+  } else if (node.name === "TransferInfo") {
+    insideTransferInfo = true;
+  } else if (node.name === "ABR") {
+    insideABR = true;
+    // Create a new record object for ABR
+    currentABR = {
+      attributes: {
+        recordLastUpdatedDate: node.attributes.recordLastUpdatedDate,
+        replaced: node.attributes.replaced,
+      },
+      ABN: {},
+      EntityType: {},
+      LegalEntity: {},
+      GST: {},
+      OtherEntity: {},
+    };
+  } else if (insideABR) {
+    currentElement = node.name; // Update currentElement here for any tag
+    if (node.name === "ABN") {
+      currentABR.ABN.status = node.attributes.status; // Capture ABN status
+    }
+  }
+});
+
+parser.on("text", (text) => {
+  const trimmedText = text.trim();
+  if (insideTransferInfo) {
+    if (!transferInfo.FileSequenceNumber) {
+      transferInfo.FileSequenceNumber = trimmedText;
+    } else if (!transferInfo.RecordCount) {
+      transferInfo.RecordCount = trimmedText;
+    } else if (!transferInfo.ExtractTime) {
+      transferInfo.ExtractTime = trimmedText;
+      insideTransferInfo = false; // Exit TransferInfo after extracting all fields
+    }
+  }
+
+  if (insideABR) {
+    // Assign text to the appropriate fields in currentABR
+    if (currentElement === "ABN") {
+      currentABR.ABN.value = trimmedText; // Assign ABN value
+    } else if (currentElement === "EntityTypeInd") {
+      currentABR.EntityType.EntityTypeInd = trimmedText; // Assign EntityTypeInd
+    } else if (currentElement === "EntityTypeText") {
+      currentABR.EntityType.EntityTypeText = trimmedText; // Assign EntityTypeText
+    } else if (currentElement === "GivenName") {
+      // For GivenName, we need to ensure it's an array
+      if (!currentABR.LegalEntity.IndividualName) {
+        currentABR.LegalEntity.IndividualName = {
+          GivenName: [],
+          FamilyName: "",
+        };
+      }
+      currentABR.LegalEntity.IndividualName.GivenName.push(trimmedText); // Capture GivenNames
+    } else if (currentElement === "FamilyName") {
+      if (!currentABR.LegalEntity.IndividualName) {
+        currentABR.LegalEntity.IndividualName = {
+          GivenName: [],
+          FamilyName: "",
+        };
+      }
+      currentABR.LegalEntity.IndividualName.FamilyName = trimmedText; // Assign FamilyName
+    } else if (currentElement === "State") {
+      if (!currentABR.LegalEntity.BusinessAddress) {
+        currentABR.LegalEntity.BusinessAddress = { AddressDetails: {} };
+      }
+      currentABR.LegalEntity.BusinessAddress.AddressDetails.State = trimmedText; // Assign State
+    } else if (currentElement === "Postcode") {
+      if (!currentABR.LegalEntity.BusinessAddress) {
+        currentABR.LegalEntity.BusinessAddress = { AddressDetails: {} };
+      }
+      currentABR.LegalEntity.BusinessAddress.AddressDetails.Postcode =
+        trimmedText; // Assign Postcode
+    } else if (currentElement === "GST") {
+      currentABR.GST.status = trimmedText; // Capture GST status from text
+    }
+  }
+});
+
+parser.on("closetag", (tagName) => {
+  if (tagName === "TransferInfo") {
+    insideTransferInfo = false; // Exit TransferInfo
+  } else if (tagName === "ABR") {
+    insideABR = false; // Exit ABR
+    // Write the current ABR record to the output file
+    outputFile.write(JSON.stringify(currentABR, null, 2) + ",\n"); // Push the current ABR record to the array
+    currentABR = null; // Reset currentABR
+  }
+});
+
+// Handle the end of the input stream
+inputFile.pipe(parser).on("end", () => {
+  // Finalize output
+  outputFile.write(`]}`); // Close the JSON array and object
+  outputFile.end(); // Close output file stream
+  console.log("Finished writing JSON data to output.json");
+});
+
+// Handle errors
+inputFile.on("error", (err) => {
+  console.error("Error reading input file:", err.message);
+});
+
+parser.on("error", (err) => {
+  console.error("Error parsing XML:", err.message);
+});
+
+outputFile.on("error", (err) => {
+  console.error("Error writing to output file:", err.message);
+});
