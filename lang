@@ -1,0 +1,196 @@
+import readline from "readline";
+import dotenv from "dotenv";
+dotenv.config();
+import { TextLoader } from "langchain/document_loaders/fs/text";
+import { CharacterTextSplitter } from "langchain/text_splitter";
+import { MemoryVectorStore } from "langchain/vectorstores/memory";
+import { AzureOpenAIEmbeddings } from "@langchain/openai";
+import { Annotation } from "@langchain/langgraph";
+import { createRetrieverTool } from "langchain/tools/retriever";
+import { ToolNode } from "@langchain/langgraph/prebuilt";
+import { HumanMessage } from "@langchain/core/messages";
+import { START } from "@langchain/langgraph";
+import { END } from "@langchain/langgraph";
+import { ChatPromptTemplate } from "@langchain/core/prompts";
+import { ChatOpenAI } from "@langchain/openai";
+import { StateGraph } from "@langchain/langgraph";
+import { pull } from "langchain/hub";
+import { z } from "zod";
+
+const loader = new TextLoader("./policy.txt");
+const docs = await loader.load();
+const splitter = new CharacterTextSplitter({
+chunkSize: 200,
+chunkOverlap: 50,
+});
+
+const documents = await splitter.splitDocuments(docs);
+console.log(documents);
+
+// Create an instance of AzureOpenAIEmbeddings with the Azure API key and endpoint
+const embeddings = new AzureOpenAIEmbeddings({
+  apiEndpoint: "https://hb-genai-test.openai.azure.com/",
+  apiKey: "5",
+  azureOpenAIApiInstanceName: "hb-genai-test", // Add the instance name here
+  azureOpenAIApiDeploymentName:"text-embedding-ada-002",
+  azureOpenAIApiVersion:"2023-05-15",
+  model: "text-embedding-ada-002"
+});
+// Your existing code
+const vectorStore = await MemoryVectorStore.fromDocuments(
+  documents,
+  embeddings
+);
+
+const retriever = vectorStore.asRetriever();
+
+const GraphState = Annotation.Root({
+  messages: Annotation({
+    reducer: (x, y) => x.concat(y),
+    default: () => [],
+  }),
+});
+
+const tool = createRetrieverTool(retriever, {
+  name: "retrieve_blog_posts",
+  description: "Search and return information about George Washington.",
+});
+
+const tools = [tool];
+const toolNode = new ToolNode(tools);
+
+// Define the workflow
+const workflow = new StateGraph(GraphState)
+  .addNode("agent", agent)
+  .addNode("retrieve", toolNode)
+  .addNode("gradeDocuments", gradeDocuments)
+  .addNode("rewrite", rewrite)
+  .addNode("generate", generate);
+
+// Workflow edges
+workflow.addEdge(START, "agent");
+workflow.addConditionalEdges("agent", shouldRetrieve);
+workflow.addEdge("retrieve", "gradeDocuments");
+workflow.addConditionalEdges("gradeDocuments", checkRelevance, {
+  yes: "generate",
+  no: "rewrite",
+});
+workflow.addEdge("generate", END);
+workflow.addEdge("rewrite", "agent");
+const app = workflow.compile();
+
+const llm = new ChatOpenAI({
+  apiEndpoint: "https://hb-genai-test.openai.azure.com/",
+  apiKey: "5",
+  azureOpenAIApiInstanceName: "hb-genai-test",
+  azureOpenAIApiDeploymentName: "gpt-4o",
+  azureOpenAIApiVersion: "2024-08-01-preview",
+  model: "gpt-4o"
+});
+
+async function agent(state) {
+  const { messages } = state;
+  const completion = await llm.invoke(messages).bindTools(tools);
+  return { messages: [completion] };
+}
+
+async function gradeDocuments(state) {
+  const { messages } = state;
+  const tool = {
+    name: "give_relevance_score",
+    description: "Give a relevance score to the retrieved documents.",
+    schema: z.object({
+      binaryScore: z.string().describe("Relevance score 'yes' or 'no'"),
+    }),
+  };
+  const prompt = ChatPromptTemplate.fromTemplate(
+    `You are a grader assessing relevance of retrieved docs to a user question...`
+  );
+  const model = new ChatOpenAI({ model: "gpt-4o", temperature: 0 }).bindTools([
+    tool,
+  ]);
+  const chain = prompt.pipe(model);
+  const lastMessage = messages[messages.length - 1];
+  const score = await chain.invoke({
+    question: messages[0].content,
+    context: lastMessage.content,
+  });
+  return { messages: [score] };
+}
+
+function shouldRetrieve(state) {
+  const { messages } = state;
+  const lastMessage = messages[messages.length - 1];
+  console.log("shouldRetrieve", lastMessage);
+  return "retrieve";
+  return lastMessage.tool_calls?.length ? "retrieve" : END;
+}
+
+function checkRelevance(state) {
+  const lastMessage = state.messages[state.messages.length - 1];
+  console.log("relevance", lastMessage);
+  return lastMessage.tool_calls?.[0]?.args.binaryScore === "yes" ? "yes" : "no";
+}
+
+async function rewrite(state) {
+  const question = state.messages[0].content;
+  const prompt = ChatPromptTemplate.fromTemplate(
+    `Rewrite the question for better understanding: {question}`
+  );
+  const model = new ChatOpenAI({ model: "gpt-4o", temperature: 0 });
+  const response = await prompt.pipe(model).invoke({ question });
+  console.log("response", response);
+  return { messages: [response] };
+}
+
+async function generate(state) {
+  const question = state.messages[0].content;
+  const lastToolMessage = state.messages
+    .slice()
+    .reverse()
+    .find((msg) => msg._getType() === "tool");
+  const docs = lastToolMessage.content;
+  const prompt = await pull("rlm/rag-prompt");
+  const llm = new ChatOpenAI({ model: "gpt-4o", temperature: 0 });
+  const ragChain = prompt.pipe(llm);
+  console.log("docs", docs);
+  const response = await ragChain.invoke({ context: docs, question });
+  return { messages: [response] };
+}
+
+// CLI Chat Loop
+async function chat(app) {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  let state = { messages: [] };
+  console.log("Type 'exit' to end the conversation.");
+
+  const askQuestion = () => {
+    rl.question("You: ", async (userInput) => {
+      if (userInput.toLowerCase() === "exit") {
+        console.log("Conversation ended.");
+        rl.close();
+        return;
+      }
+
+      state.messages.push(new HumanMessage(userInput));
+      console.log("Thinking...");
+      for await (const output of await app.stream(state)) {
+        for (const [key, value] of Object.entries(output)) {
+          const lastMessage = value.messages[value.messages.length - 1];
+          console.log(`AI: ${lastMessage.content}`);
+          state.messages.push(lastMessage);
+        }
+      }
+      askQuestion();
+    });
+  };
+
+  askQuestion();
+}
+
+// Start the conversation
+await chat(app);
