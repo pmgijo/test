@@ -1,0 +1,134 @@
+import { db } from "./db/index.js";
+import { tasksTable } from "./db/schema.js";
+import { ilike } from "drizzle-orm";
+import readlineSync from "readline-sync";
+
+async function getAllTasks() {
+  const tasks = await db.select().from(tasksTable);
+  return tasks;
+}
+
+async function createTask(task) {
+  const [result] = await db
+    .insert(tasksTable)
+    .values({
+      task,
+    })
+    .returning({
+      id: tasksTable.id,
+    });
+  return result.id;
+}
+
+async function deleteTaskById(id) {
+  db.delete(tasksTable).where(eq(tasksTable.id, id));
+}
+
+async function searchTask(search) {
+  const tasks = await db
+    .select()
+    .from(tasksTable)
+    .where(ilike(tasksTable.task, `%${search}%`));
+  return tasks;
+}
+
+// Function to call the LLM API
+async function callLLMAPI(prompt) {
+  const response = await fetch(
+    {
+      method: "POST",
+      headers: {
+        Accept: "*/*",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        prompt: prompt,
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    console.error(`Error: ${response.statusText}`, errorBody);
+    throw new Error(`Error: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  return data?.response;
+}
+
+const tools = {
+  getAllTasks: getAllTasks,
+  createTask: createTask,
+  deleteTaskById: deleteTaskById,
+  searchTask: searchTask,
+};
+
+const SYSTEM_PROMPT = `
+    You are an AI assistant with START, PLAN, ACTION, OBSERVATION and OUTPUT STATE.
+    Wait for the user prompt and first PLAN using the available tools
+    After planning, take the action with appropriate tools and wait for OBSERVATION based on Action
+    Once you ge the observations, return the AI respones based on START prompt and observations
+
+    You can manage tasks by adding, viewing, updating, and deleting the records
+    using available tools.
+    You must strictlly follow the JSON output format.
+
+    Todo DB Schema:
+    "id": integer
+	"task": String
+	"created_at": Date Time 
+	"updated_at": Date Time
+
+    Available tools:
+    - getAllTasks(): Returns all the tasks from database
+    - createTask(task: string): Creates a new Task in the DB and takes task as a stirng.
+    - deleteTaskById (id: string): Deleted the task by Id given in the datbase
+    - searchTask (query: string): Searches for all tasks matching the query string using ilike operator  
+
+    Example:
+    START
+    {"type": "user", "user": "Add a task for shopping groceries"}
+    {"type": "plan", "plan": "I will try to get more context on what user needs to shop"}
+    {"type": "output", "output": "Can you tell me what all items you want to shop"}
+    {"type": "user", "user": "I want to shop for milk, bananas, lays and choclate"}
+    {"type": "plan", "plan": "I will use createTask  to create new Task in Database"}
+    {"type": "action", "function": "createTask", "input": "Shopping for milk, bananas, lays and choclate"}
+    {"type": "observation", "observation": "2"}
+    {"type}: "output", "output":"your task has been added successfully"
+  `;
+
+const messages = [{ role: "system", content: SYSTEM_PROMPT }];
+
+while (true) {
+  const query = readlineSync.question("Enter your query: ");
+  const userMessage = {
+    type: "user",
+    user: query,
+  };
+  messages.push({ role: "user", content: JSON.stringify(query) });
+  while (true) {
+    const chat = await callLLMAPI(messages);
+    messages.push({ role: "assistant", content: chat });
+    const action = JSON.parse(chat);
+    console.log("******AI MESSAGE****");
+    console.log(action);
+    console.log("******AI MESSAGE****");
+    if (action.type === "output") {
+      console.log(`🤖${JSON.stringify(action.output)}`);
+      break;
+    } 
+    else if (action.type === "action") {
+        const fn = tools[action.function];
+        if (!fn){
+            throw new Error(`Function ${action.function} not found`);
+        }
+        const observation = await fn(action.input);
+        const observationMessage = {
+            type: "observation",
+            observation: observation,
+        };
+        messages.push({role: "assistant", content: JSON.stringify(observationMessage)});
+    }
+  }
+}
