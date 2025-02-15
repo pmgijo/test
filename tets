@@ -1,43 +1,121 @@
-function apportionLMI(lmiDetails, currentReturnData) {
-  if (lmiDetails && lmiDetails.lmiPremium && currentReturnData && currentReturnData.loanDetails) {
-    // Ensure all loan amounts are valid numbers and above 0
-    const updatedReturnData = JSON.parse(JSON.stringify(currentReturnData));
-    
-    const ttlLoanAmount = updatedReturnData.loanDetails.reduce((sum, loan) => {
-      const loanAmount = parseFloat(loan.loanAmount || 0);
-      return sum + loanAmount;
-    }, 0);
+import "dotenv/config";
+import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
+import OpenAI from "openai";
+import { ChromaClient } from "chromadb";
+import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
 
-    if (ttlLoanAmount <= 0) {
-      console.error("Total Loan Amount is invalid:", ttlLoanAmount);
-      return updatedReturnData; // Return early to avoid divide-by-zero
-    }
+const openai = new OpenAI();
+const chromaClient = new ChromaClient({ path: "http://localhost:8000" });
+chromaClient.heartbeat();
 
-    const apportionedLmi = updatedReturnData.loanDetails.map(loan => {
-      const loanAmount = parseFloat(loan.loanAmount || 0);
-      return {
-        id: loan.id,
-        lmiApportioned: (loanAmount / ttlLoanAmount) * lmiDetails.lmiPremium
-      };
+const WEB_COLLECTION = "RESPONSIBLE1";
+
+// Function to extract text from PDF
+async function extractTextFromPdf(pdfPath) {
+  const loader = new PDFLoader(pdfPath);
+  const docs = await loader.load();
+  const combinedText = docs.map(doc => doc.pageContent).join("\n");
+  return combinedText; 
+}
+
+// Function to insert vector embeddings into ChromaDB
+async function insertIntoVector({ embedding, url, body = "" }) {
+  const collection = await chromaClient.getOrCreateCollection({
+    name: WEB_COLLECTION,
+  });
+  collection.add({
+    ids: [url],
+    embeddings: [embedding],
+    metadatas: [{body}],
+    documents: [body],
+  });
+}
+
+// Function to generate vector embeddings using OpenAI
+async function generateVectorEmbeddings({ text }) {
+  const embedding = await openai.embeddings.create({
+    model: "text-embedding-ada-002",
+    input: text,
+    encoding_format: "float",
+  });
+  return embedding.data[0].embedding;
+}
+
+// Function to ingest the PDF content into ChromaDB
+async function ingest(pdfPath = "") {
+  const pdfText = await extractTextFromPdf(pdfPath);
+
+  // Use LangChain TextSplitter to chunk the PDF text
+  const textSplitter = new RecursiveCharacterTextSplitter({
+    chunkSize: 1000, // Adjust chunk size to your needs
+    chunkOverlap: 200, // Set overlap for chunking
+  });
+
+  // Split the extracted text into chunks
+  const bodyChunks = await textSplitter.splitText(String(pdfText));
+  console.log(bodyChunks);
+
+  let id=0;
+  // Iterate over the chunks and generate embeddings
+  for (const chunk of bodyChunks) {
+    const bodyEmbedding = await generateVectorEmbeddings({ text: chunk });
+    await insertIntoVector({
+      embedding: bodyEmbedding,
+      url: `ID${id}`, // Storing the PDF path as the "url"
+      body: chunk,
     });
-
-    const updatedLoanDetails = updatedReturnData.loanDetails.map(loan => {
-      const apportionedItem = apportionedLmi.find(item => item.id === loan.id);
-      const apportionedAmount = apportionedItem ? parseFloat(apportionedItem.lmiApportioned || 0) : 0;
-      const newTotalLoanAmount = (parseFloat(loan.loanAmount || 0) + apportionedAmount).toFixed(2);
-
-      return {
-        ...loan,
-        totalLoanAmount: newTotalLoanAmount // Ensure this matches the structure in the state
-      };
-    });
-
-    updatedReturnData.loanDetails = updatedLoanDetails;
-    updatedReturnData.lmiCosts = lmiDetails;
-
-    console.log("Final updatedReturnData:", JSON.stringify(updatedReturnData, null, 2));
-    return updatedReturnData; // Ensure this returns the updated data
+    id++;
   }
 
-  return currentReturnData; // Return current state if conditions aren't met
+  console.log(`🐶 PDF ${pdfPath} ingested`);
 }
+
+// Function to chat and get relevant context from ChromaDB
+async function chat(question = "") {
+  const questionEmbedding = await generateVectorEmbeddings({ text: question });
+  
+  const collection = await chromaClient.getOrCreateCollection({
+    name: WEB_COLLECTION,
+  });
+  
+  // Query the ChromaDB collection to get the most relevant data
+  const collectionResult = await collection.query({
+    nResults: 10, // Adjust the number of relevant results
+    queryEmbeddings: questionEmbedding,
+  });
+  
+  // Get the body content of the retrieved results
+  const body = collectionResult.metadatas[0]
+  .map((e) => e.body)
+  .filter((e) => e.trim() !== "" || !!e);
+
+  // Use OpenAI to generate a response based on the retrieved context
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are an AI support assistant that provides answers based on the content of the PDF. Reply to the user based on the context provided.",
+      },
+      {
+        role: "user",
+        content: `
+          Query: ${question}\n\n
+          Retrieved Context: ${body}
+        `,
+      },
+    ],
+  });
+
+  console.log(`🦊: ${response.choices[0].message.content}`);
+}
+
+// Example usage: Ingesting the PDF and asking a question
+const pdfPath = "./Responsible-Lending.pdf";
+
+// Ingest the PDF into ChromaDB (call this once)
+// await ingest(pdfPath);
+
+// Ask a question
+await chat("What is ePayments?");
