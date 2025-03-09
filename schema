@@ -1,0 +1,244 @@
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
+
+const AddressSchema = new Schema({
+  addressSummary: String,
+  lotNumber: String,
+  addressLine1: String,
+  addressLine2: String,
+  suburb: String,
+  state: String,
+  type: String,
+  country: String,
+});
+
+const PhoneSchema = new Schema({
+  countryCode: String,
+  phoneNumber: String,
+});
+
+const ContactDetailsSchema = new Schema({
+  mobilePhone: PhoneSchema,
+  landPhone: PhoneSchema,
+  businessPhone: PhoneSchema,
+  email: String,
+  contactMethod: String,
+  addresses: [AddressSchema],
+});
+
+const DeclarationSchema = new Schema({
+  interviewHeld: String,
+  consentMethod: String,
+  consentStatus: Boolean,
+});
+
+const EmployerSchema = new Schema({
+  businessName: String,
+  registrationDate: String,
+  acn: String,
+  abn: String,
+  abnStatus: String,
+  entityType: String,
+  activeFrom: String
+});
+
+const DirectIncomeSchema = new Schema({
+  incomeType: String,
+  amount:Number,
+  frequency: String
+});
+
+const EmploymentSchema = new Schema({
+  employmentStatus: String,
+  employmentType: String,
+  employmentBasis: String,
+  startDate: Date,
+  isProbation: Boolean,
+  employerType: String,
+  employer: EmployerSchema,
+  employerSearch: String,
+  title: String,
+  firstName: String,
+  lastName: String,
+  addresses: [AddressSchema],
+  email: String,
+  occupationCode: String,
+  isForiegnCurrency: Boolean,
+  currency: String,
+  directIncomes: [DirectIncomeSchema]
+});
+
+const ApplicantSchema = new Schema({
+  declaration: DeclarationSchema,
+  customerId: String,
+  title: String,
+  applicantType: String,
+  applicantRole: String,
+  firstName: String,
+  surName: String,
+  residency: String,
+  employmentCategory: String,
+  dateOfBirth: Date,
+  currentAge: String,
+  retireAge: String,
+  isPermanentResident: Boolean,
+  isCBAEmployee: Boolean,
+  isTaxResident: Boolean,
+  eligibleFirstHomeBuyer: Boolean,
+  contactDetails: ContactDetailsSchema,
+  employments: [EmploymentSchema]
+});
+
+const ExpenseSchema = new Schema({
+  value: Schema.Types.Mixed,
+  frequency: String,
+  fieldName: String
+});
+
+const HouseholdExpensesSchema = new Schema({
+  totalExpenses: [new Schema({
+    "1": ExpenseSchema,
+    "2": ExpenseSchema,
+    "3": ExpenseSchema,
+    "4": ExpenseSchema,
+  })],
+  individualExpenses: [[Schema.Types.Mixed]],
+  totalsOnly: Boolean,
+});
+
+const RealEstateAssetSchema = new Schema({
+  transactionType: String,
+  propertyCategory: String,
+  isSecurity: Boolean,
+  ownership: String,
+  description: String,
+  value: Number,
+  zoning: String,
+  propertyType: String,
+  addresses: [AddressSchema],
+  expenseAmount: Number
+});
+
+const OtherAssetSchema = new Schema({
+  assetType: String,
+  ownership: String,
+  isSecurity: Boolean,
+  value: Number,
+  institution: String,
+  description: String,
+  accountName: String,
+  bsb: String,
+  accountNumber: String,
+  grossIncome: Number,
+  incomeFrequency: String,
+  });
+
+const RentalIncomeSchema = new Schema({
+  incomeType: String,
+  description: String,
+  ownership: String,
+  incomeAmount: Number
+});
+
+const CommitmentSchema = new Schema({
+  id: Number,
+  liabilityType: String,
+  limit: Number,
+  repayment: Number,
+  reduceLimit: Boolean,
+  ongoingLimit: Number,
+  description: String,
+  ownership: String,
+  balance: Number,
+});
+
+const FinancialsSchema = new Schema({
+  householdExpenses: HouseholdExpensesSchema,
+  realEstateAssets: [RealEstateAssetSchema],
+  otherAssetsList: [OtherAssetSchema],
+  rentalIncomes: [RentalIncomeSchema],
+  commitmentList: [CommitmentSchema],
+  livingExpenses: [Schema.Types.Mixed],
+});
+
+
+const ProductSelectionSchema = new Schema({
+  amount: Number,
+  checked: Boolean
+});
+const NeedsSchema = new Schema({
+  applicationType: String,
+  totalLoanAmountRequested: Number,
+  loanType: String,
+  loanValues: Schema.Types.Mixed,
+  loanPurpose: [String],
+  loanFeatures: [String],
+  productSelection: [ProductSelectionSchema]
+});
+
+const LoanPurposeSchema = new Schema({
+  purposeCode: String,
+  isMain: Boolean,
+  amount: Number
+});
+
+const LoanDetailsSchema = new Schema({
+  facilityType: String,
+  requestedAmount: Number,
+  totalLoanTerm: String,
+  assignFees: Boolean,
+  lmiPolicyNumber: String,
+  repaymentType: String,
+  repaymentFrequency: String,
+  repaymentMethod: String,
+  isInterestTax: Boolean,
+  isTopUp: Boolean,
+  ownership: String,
+  hlptId: String,
+  approvedDiscount: String,
+  loanFeatures: [String],
+  loanPurpose: [LoanPurposeSchema],
+  packageOptions: String,
+  campaignCode: String,
+  conveyancing: Boolean
+});
+
+const SecurityAssetSchema = new Schema({
+  securityType: String,
+  transactionType: String,
+  isPrincipalSecurity: Boolean,
+  ownership: String,
+  propertyCategory: String,
+  isSecurity: Boolean,
+  isHomeSeeker: Boolean,
+  addresses: [AddressSchema],
+  propertyShare: Boolean,
+  isToBuilt: Boolean,
+  isRuralLand: Boolean,
+  zoning: String,
+  description: String,  
+  rentalIncome: Number,
+  rentalIncomeFrequency: String,
+  value: Number,
+  hasDifferentName: Boolean,
+  expenseAmount: Number,
+  expenseFrequency: String,
+  existingCharge: Boolean
+});
+const ApplicationSchema = new Schema({
+  applicationId: {
+    type: String,
+    required: true,
+    unique: true,
+    index: true
+},
+  applicants: [ApplicantSchema],
+  financials: FinancialsSchema,
+  needs: NeedsSchema,
+  loanDetails: [LoanDetailsSchema],
+  securityAssets: [SecurityAssetSchema],
+});
+
+const Application = mongoose.model('Application', ApplicationSchema);
+
+module.exports = Application;
