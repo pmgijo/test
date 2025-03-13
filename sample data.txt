@@ -1,0 +1,203 @@
+"householdExpenses": {
+                    "households": [
+                        {
+                            "totalExpenses": {
+                                "basicLivingExpenses": {
+                                    "value": "1212",
+                                    "frequency": "Yearly",
+                                    "includeInTotal": true,
+                                    "title": "Basic Living Expenses"
+                                },
+                                "otherAdditionalExpenses": {
+                                    "value": "1232",
+                                    "frequency": "Yearly",
+                                    "includeInTotal": true,
+                                    "title": "Other Additional Expenses"
+                                }
+                            },
+                            "individualExpenses": {
+                                "foodAndGroceries": {
+                                    "value": 0,
+                                    "frequency": "Monthly",
+                                    "includeInTotal": true,
+                                    "title": "Food and Groceries"
+                                },
+                                "primaryResidenceUtility": {
+                                    "value": 0,
+                                    "frequency": "Monthly",
+                                    "includeInTotal": true,
+                                    "title": "Primary Residence Utility"
+                                },
+                                "communication": {
+                                    "value": 0,
+                                    "frequency": "Monthly",
+                                    "includeInTotal": true,
+                                    "title": "Communication"
+                                },
+                                "tertiaryAndPublicEducation": {
+                                    "value": 0,
+                                    "frequency": "Monthly",
+                                    "includeInTotal": true,
+                                    "title": "Tertiary and Public Education"
+                                },
+                                "clothingAndPersonalCare": {
+                                    "value": 0,
+                                    "frequency": "Monthly",
+                                    "includeInTotal": true,
+                                    "title": "Clothing and Personal Care"
+                                },
+                                "transportAndAuto": {
+                                    "value": 0,
+                                    "frequency": "Monthly",
+                                    "includeInTotal": true,
+                                    "title": "Transport and Auto"
+                                },
+                                "medicalHealthAndFitness": {
+                                    "value": 0,
+                                    "frequency": "Monthly",
+                                    "includeInTotal": true,
+                                    "title": "Medical Health and Fitness"
+                                },
+                                "insurance": {
+                                    "value": 0,
+                                    "frequency": "Monthly",
+                                    "includeInTotal": true,
+                                    "title": "Insurance"
+                                },
+                                "recreationTravelAndEntertainment": {
+                                    "value": 0,
+                                    "frequency": "Monthly",
+                                    "includeInTotal": true,
+                                    "title": "Recreation Travel and Entertainment"
+                                },
+                                "childrenAndPets": {
+                                    "value": 0,
+                                    "frequency": "Monthly",
+                                    "includeInTotal": true,
+                                    "title": "Children and Pets"
+                                },
+                                "expensesForAuditDependents": {
+                                    "value": 0,
+                                    "frequency": "Monthly",
+                                    "includeInTotal": true,
+                                    "title": "Expenses for Audit Dependents"
+                                },
+                                "otherAdditionalExpenses": {
+                                    "value": 0,
+                                    "frequency": "Monthly",
+                                    "includeInTotal": true,
+                                    "title": "Other Additional Expenses"
+                                }
+                            },
+                            "index": 0,
+                            "applicantsInHousehold": [
+                                {
+                                    "id": 0,
+                                    "fullName": "Applicant sad"
+                                }
+                            ],
+                            "adultsOver18": "2",
+                            "dependantsUnder18": "2"
+                        },
+                        {
+                            "totalExpenses": {
+                                "basicLivingExpenses": {
+                                    "value": "323",
+                                    "frequency": "Yearly",
+                                    "includeInTotal": true,
+                                    "title": "Basic Living Expenses"
+                                },
+                                "otherAdditionalExpenses": {
+                                    "value": "2323",
+                                    "frequency": "Yearly",
+                                    "includeInTotal": true,
+                                    "title": "Other Additional Expenses"
+                                }
+                            },
+                            "individualExpenses": {
+                                "foodAndGroceries": {
+                                    "value": 0,
+                                    "frequency": "Monthly",
+                                    "includeInTotal": true,
+                                    "title": "Food and Groceries"
+                                },
+                                "primaryResidenceUtility": {
+                                    "value": 0,
+                                    "frequency": "Monthly",
+                                    "includeInTotal": true,
+                                    "title": "Primary Residence Utility"
+                                },
+                                "communication": {
+                                    "value": 0,
+                                    "frequency": "Monthly",
+                                    "includeInTotal": true,
+                                    "title": "Communication"
+                                },
+                                "tertiaryAndPublicEducation": {
+                                    "value": 0,
+                                    "frequency": "Monthly",
+                                    "includeInTotal": true,
+                                    "title": "Tertiary and Public Education"
+                                },
+                                "clothingAndPersonalCare": {
+                                    "value": 0,
+                                    "frequency": "Monthly",
+                                    "includeInTotal": true,
+                                    "title": "Clothing and Personal Care"
+                                },
+                                "transportAndAuto": {
+                                    "value": 0,
+                                    "frequency": "Monthly",
+                                    "includeInTotal": true,
+                                    "title": "Transport and Auto"
+                                },
+                                "medicalHealthAndFitness": {
+                                    "value": 0,
+                                    "frequency": "Monthly",
+                                    "includeInTotal": true,
+                                    "title": "Medical Health and Fitness"
+                                },
+                                "insurance": {
+                                    "value": 0,
+                                    "frequency": "Monthly",
+                                    "includeInTotal": true,
+                                    "title": "Insurance"
+                                },
+                                "recreationTravelAndEntertainment": {
+                                    "value": 0,
+                                    "frequency": "Monthly",
+                                    "includeInTotal": true,
+                                    "title": "Recreation Travel and Entertainment"
+                                },
+                                "childrenAndPets": {
+                                    "value": 0,
+                                    "frequency": "Monthly",
+                                    "includeInTotal": true,
+                                    "title": "Children and Pets"
+                                },
+                                "expensesForAuditDependents": {
+                                    "value": 0,
+                                    "frequency": "Monthly",
+                                    "includeInTotal": true,
+                                    "title": "Expenses for Audit Dependents"
+                                },
+                                "otherAdditionalExpenses": {
+                                    "value": 0,
+                                    "frequency": "Monthly",
+                                    "includeInTotal": true,
+                                    "title": "Other Additional Expenses"
+                                }
+                            },
+                            "index": 1,
+                            "applicantsInHousehold": [
+                                {
+                                    "id": 0,
+                                    "fullName": "Applicant sad"
+                                }
+                            ],
+                            "adultsOver18": "1",
+                            "dependantsUnder18": "1"
+                        }
+                    ],
+                    "totalsOnly": true
+                },
