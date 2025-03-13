@@ -1,0 +1,303 @@
+erDiagram
+    Application {
+        string applicationId
+        string externalId
+        string brand
+        string modUserId
+        datetime timestamp
+        int version
+    }
+    Applicant {
+        string applicantId
+        string applicationId
+        string externalId
+        string modUserId
+        datetime timestamp
+        int version
+        string customerId
+        string applicantType
+        string applicantRole
+        string firstName
+        string surName
+        string residency
+        string employmentCategory
+        datetime dateOfBirth
+        int currentAge
+        int retireAge
+        bool isPermanentResident
+        bool isCBAEmployee
+        bool isTaxResident
+        bool eligibleFirstHomeBuyer
+    }
+    Declaration {
+        string declarationId
+        string applicantId
+        string externalId
+        string modUserId
+        datetime timestamp
+        int version
+        string interviewHeld
+        string consentMethod
+        bool consentStatus
+    }
+    ContactDetails {
+        string contactDetailsId
+        string applicantId
+        string externalId
+        string modUserId
+        datetime timestamp
+        int version
+        string email
+        string contactMethod
+    }
+    Address {
+        string addressId
+        string contactDetailsId
+        string externalId
+        string modUserId
+        datetime timestamp
+        int version
+        string addressSummary
+        string lotNumber
+        string addressLine1
+        string addressLine2
+        string suburb
+        string state
+        string type
+        string country
+    }
+    Employment {
+        string employmentId
+        string applicantId
+        string externalId
+        string modUserId
+        datetime timestamp
+        int version
+        string employmentStatus
+        string employmentType
+        string employmentBasis
+        datetime startDate
+        bool isProbation
+        string employerType
+        string employerId
+        string employerSearch
+        string title
+        string firstName
+        string lastName
+        string email
+        string occupationCode
+        bool isForiegnCurrency
+        string currency
+    }
+    Employer {
+        string employerId
+        string externalId
+        string modUserId
+        datetime timestamp
+        int version
+        string businessName
+        datetime registrationDate
+        string acn
+        string abn
+        string abnStatus
+        string entityType
+        datetime activeFrom
+    }
+    DirectIncome {
+        string directIncomeId
+        string employmentId
+        string externalId
+        string modUserId
+        datetime timestamp
+        int version
+        string incomeType
+        float amount
+        string frequency
+    }
+    Household {
+        string householdId
+        string applicationId
+        string externalId
+        string modUserId
+        datetime timestamp
+        int version
+        int index
+        int adultsOver18
+        int dependantsUnder18
+    }
+    Expense {
+        string expenseId
+        string householdId
+        string externalId
+        string modUserId
+        datetime timestamp
+        int version
+        float value
+        string frequency
+        bool includeInTotal
+        string title
+    }
+    RealEstateAsset {
+        string realEstateAssetId
+        string applicationId
+        string externalId
+        string modUserId
+        datetime timestamp
+        int version
+        string transactionType
+        string propertyCategory
+        bool isSecurity
+        string ownership
+        string description
+        float value
+        string zoning
+        string propertyType
+        float expenseAmount
+    }
+    OtherAsset {
+        string otherAssetId
+        string applicationId
+        string externalId
+        string modUserId
+        datetime timestamp
+        int version
+        string assetType
+        string ownership
+        bool isSecurity
+        float value
+        string institution
+        string description
+        string accountName
+        string bsb
+        string accountNumber
+        float grossIncome
+        string incomeFrequency
+    }
+    RentalIncome {
+        string rentalIncomeId
+        string applicationId
+        string externalId
+        string modUserId
+        datetime timestamp
+        int version
+        string incomeType
+        string description
+        string ownership
+        float incomeAmount
+    }
+    Commitment {
+        string commitmentId
+        string applicationId
+        string externalId
+        string modUserId
+        datetime timestamp
+        int version
+        string liabilityType
+        float limit
+        float repayment
+        bool reduceLimit
+        float ongoingLimit
+        string description
+        string ownership
+        float balance
+    }
+    LivingExpense {
+        string livingExpenseId
+        string applicationId
+        string externalId
+        string modUserId
+        datetime timestamp
+        int version
+        float value
+        string frequency
+        string fieldName
+    }
+    LoanDetail {
+        string loanDetailId
+        string applicationId
+        string externalId
+        string modUserId
+        datetime timestamp
+        int version
+        string facilityType
+        float requestedAmount
+        string totalLoanTerm
+        bool assignFees
+        string lmiPolicyNumber
+        string repaymentType
+        string repaymentFrequency
+        string repaymentMethod
+        bool isInterestTax
+        bool isTopUp
+        string ownership
+        string hlptId
+        string approvedDiscount
+        string packageOptions
+        string campaignCode
+        bool conveyancing
+    }
+    LoanPurpose {
+        string loanPurposeId
+        string loanDetailId
+        string externalId
+        string modUserId
+        datetime timestamp
+        int version
+        string purposeCode
+        bool isMain
+        float amount
+    }
+    SecurityAsset {
+        string securityAssetId
+        string applicationId
+        string externalId
+        string modUserId
+        datetime timestamp
+        int version
+        string securityType
+        string transactionType
+        bool isPrincipalSecurity
+        string ownership
+        string propertyCategory
+        bool isSecurity
+        bool isHomeSeeker
+        bool propertyShare
+        bool isToBuilt
+        bool isRuralLand
+        string zoning
+        string description
+        float rentalIncome
+        string rentalIncomeFrequency
+        float value
+        bool hasDifferentName
+        float expenseAmount
+        string expenseFrequency
+        bool existingCharge
+    }
+    Audit {
+        string auditId
+        string tableName
+        string recordId
+        string changeType
+        string changeDetails
+        string modUserId
+        datetime timestamp
+    }
+
+    Application ||--o{ Applicant : has
+    Applicant ||--|{ Declaration : has
+    Applicant ||--o{ ContactDetails : has
+    ContactDetails ||--o{ Address : has
+    Applicant ||--o{ Employment : has
+    Employment ||--|{ Employer : has
+    Employment ||--o{ DirectIncome : has
+    Application ||--o{ Household : has
+    Household ||--o{ Expense : has
+    Application ||--o{ RealEstateAsset : has
+    Application ||--o{ OtherAsset : has
+    Application ||--o{ RentalIncome : has
+    Application ||--o{ Commitment : has
+    Application ||--o{ LivingExpense : has
+    Application ||--o{ LoanDetail : has
+    LoanDetail ||--o{ LoanPurpose : has
+    Application ||--o{ SecurityAsset : has
