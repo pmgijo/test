@@ -1,4 +1,5 @@
-/src/store/index.js
+
+./src/store/index.js
 export 'selectApplicantIds' (reexported as 'selectApplicantIds') was not found in './slices/applicantSlice' (possible exports: addAddress, addApplicant, addEmployment, addIncome, addTrustee, applicantSlice, default, removeAddress, removeApplicant, removeEmployment, removeIncome, removeTrustee, resetApplicants, selectActiveApplicant, selectActiveApplicantId, selectApplicantById, selectApplicantVersion, selectApplicants, selectApplicantsError, selectApplicantsLoading, setActiveApplicant, setApplicants, setError, setLoading, updateAddress, updateCommonApplicantFields, updateCompanyApplicant, updateContactInfo, updateDeclarations, updateEmployment, updateIncome, updatePersonApplicant, updateTrustApplicant, updateTrustee)
 
 Import trace for requested module:
@@ -433,3 +434,12 @@ Import trace for requested module:
 ./src/store/index.js
 ./src/utils/permissionUtils.ts
 ./src/app/api/admin/validations/route.js
+
+   Linting and checking validity of types  ... ⨯ ESLint: Invalid Options: - Unknown options: useEslintrc, extensions - 'extensions' has been removed.
+   Linting and checking validity of types  ...Failed to compile.
+
+src/app/api/applications/123456789/calculations/route.js
+Type error: Route "src/app/api/applications/123456789/calculations/route.js" does not match the required types of a Next.js Route.
+  "POST_refresh" is not a valid Route export field.
+
+Next.js build worker exited with code: 1 and signal: null
